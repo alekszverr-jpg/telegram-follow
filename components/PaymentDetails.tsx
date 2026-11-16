@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { paymentMode } from "@/lib/payment-config";
 
 export type SavedOrder = { requestId: string; amount: number; plan: string; provider?: "prodamus"; paymentUrl?: string; paymentStatus?: string };
 
@@ -11,8 +12,8 @@ export function PaymentDetails({ order }: { order: SavedOrder }) {
         <div><dt>Пакет</dt><dd>{order.plan}</dd></div>
         <div><dt>К оплате</dt><dd className="order-amount">{order.amount.toLocaleString("ru-RU")} ₽</dd></div>
       </dl>
-      {order.paymentStatus === "Оплачено" ? <p>Оплата получена.</p> : order.provider === "prodamus" ? (
-        order.paymentUrl ? <>
+      {order.paymentStatus === "Оплачено" ? <p>Оплата получена.</p> : paymentMode === "prodamus" ? (
+        order.provider === "prodamus" && order.paymentUrl ? <>
           <p>Оплатите выбранный пакет. Сумма уже указана на странице оплаты.</p>
           <a className="payment-prodamus-button" href={order.paymentUrl}>Оплатить</a>
         </> : <p>Оплата временно недоступна. Попробуйте чуть позже или напишите на realbuzzmanager@yandex.ru.</p>
@@ -22,7 +23,7 @@ export function PaymentDetails({ order }: { order: SavedOrder }) {
         <article className="payment-bank">
           <h4>Сбер и Т-Банк</h4>
           <Image src="/payments/sber.png" width={600} height={600} alt="QR-код оплаты через Сбер" />
-          <a href="https://www.sberbank.ru/ru/choise_bank?requisiteNumber=79174812644&amp;bankCode=100000000111" target="_blank" rel="noopener noreferrer">Оплатить</a>
+          <a href="https://www.sberbank.ru/ru/choise_bank?requisiteNumber=79174812644&bankCode=100000000111" target="_blank" rel="noopener noreferrer">Оплатить</a>
           <small className="payment-help">Не открывается? Попробуйте Яндекс Браузер.</small>
           <small className="payment-help payment-help--desktop">QR-код можно сканировать в приложении банка.</small>
         </article>
