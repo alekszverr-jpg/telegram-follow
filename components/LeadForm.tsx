@@ -3,6 +3,7 @@ import type { PricingPlan } from "@/data/content";
 import { CheckIcon } from "./Icons";
 import { normalizeChannelLink } from "@/lib/channel-link";
 import { PaymentDetails, type SavedOrder } from "./PaymentDetails";
+import { validatePayAnyWayForm } from "@/lib/payanyway-form";
 
 type LeadFormProps = {
   plans: PricingPlan[];
@@ -82,7 +83,8 @@ export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
           } catch { /* A malformed payment URL must never become a link. */ }
         }
         setSavedOrder({ requestId: result.requestId, amount, plan: selectedPlanLabel,
-          provider: result.paymentProvider === "prodamus" ? "prodamus" : undefined,
+          provider: result.paymentProvider === "prodamus" || result.paymentProvider === "payanyway" ? result.paymentProvider : undefined,
+          paymentForm: validatePayAnyWayForm(result.paymentForm, result.requestId, amount),
           paymentUrl, paymentStatus: result.paymentStatus });
         try {
           sessionStorage.setItem("prodamus.order." + result.requestId, JSON.stringify({

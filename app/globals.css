@@ -350,3 +350,5 @@ summary::-webkit-details-marker { display: none; }
 
 .order-payment .payment-prodamus-button { display: flex; align-items: center; justify-content: center; min-height: 52px; padding: 12px 20px; border-radius: 12px; background: #087bb0; color: #fff; font-weight: 600; text-decoration: none; }
 .order-payment .payment-prodamus-button:hover { background: #06628d; }
+
+.order-payment button.payment-prodamus-button { width: 100%; border: 0; cursor: pointer; font: inherit; font-weight: 600; }

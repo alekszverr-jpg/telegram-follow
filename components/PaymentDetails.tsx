@@ -1,9 +1,11 @@
 import Image from "next/image";
 import { paymentMode } from "@/lib/payment-config";
+import { validatePayAnyWayForm, type PayAnyWayForm } from "@/lib/payanyway-form";
 
-export type SavedOrder = { requestId: string; amount: number; plan: string; provider?: "prodamus"; paymentUrl?: string; paymentStatus?: string };
+export type SavedOrder = { requestId: string; amount: number; plan: string; provider?: "prodamus" | "payanyway"; paymentUrl?: string; paymentForm?: PayAnyWayForm; paymentStatus?: string };
 
 export function PaymentDetails({ order }: { order: SavedOrder }) {
+  const paymentForm = validatePayAnyWayForm(order.paymentForm, order.requestId, order.amount);
   return (
     <section className="order-payment" aria-label="Оплата заявки" data-clarity-mask="true">
       <h3>{order.paymentStatus === "Оплачено" ? "Заказ оплачен" : "Заявка сохранена — можно оплатить"}</h3>
@@ -12,7 +14,15 @@ export function PaymentDetails({ order }: { order: SavedOrder }) {
         <div><dt>Пакет</dt><dd>{order.plan}</dd></div>
         <div><dt>К оплате</dt><dd className="order-amount">{order.amount.toLocaleString("ru-RU")} ₽</dd></div>
       </dl>
-      {order.paymentStatus === "Оплачено" ? <p>Оплата получена.</p> : paymentMode === "prodamus" ? (
+      {order.paymentStatus === "Оплачено" ? <p>Оплата получена.</p> : paymentMode === "payanyway" ? (
+        order.provider === "payanyway" && paymentForm ? <>
+          <p>Оплатите выбранный пакет. Сумма уже указана на странице оплаты.</p>
+          <form action={paymentForm.action} method="post">
+            {Object.entries(paymentForm.fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
+            <button className="payment-prodamus-button" type="submit">Оплатить</button>
+          </form>
+        </> : <p>Оплата временно недоступна. Напишите на realbuzzmanager@yandex.ru.</p>
+      ) : paymentMode === "prodamus" ? (
         order.provider === "prodamus" && order.paymentUrl ? <>
           <p>Оплатите выбранный пакет. Сумма уже указана на странице оплаты.</p>
           <a className="payment-prodamus-button" href={order.paymentUrl}>Оплатить</a>
