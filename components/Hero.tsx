@@ -21,7 +21,7 @@ export function Hero({ onPrimaryClick, onPricingClick }: HeroProps) {
           <p className="hero-eyebrow"><span />Живые подписчики в Telegram</p>
           <h1>Подписчики Телеграм для вашего канала</h1>
           <p className="hero-description">
-            Запускаем рассылку-приглашение по большой базе пользователей. Люди сами переходят в канал и подписываются, если им интересна тема.
+            Привлекаем реальных пользователей через оплачиваемые задания на подписку. Пользователи получают вознаграждение; интерес к контенту и активность не гарантируются.
           </p>
           <div id="hero-actions" className="hero-actions">
             <button className="btn-primary" type="button" onClick={onPrimaryClick}>
@@ -41,13 +41,13 @@ export function Hero({ onPrimaryClick, onPricingClick }: HeroProps) {
             <TelegramLogo className="dashboard-logo" />
             <div className="min-w-0">
               <p className="dashboard-title">Telegram-канал</p>
-              <p className="dashboard-subtitle">Профиль готов к рассылке-приглашению</p>
+              <p className="dashboard-subtitle">Пример выполнения заказа</p>
             </div>
             <span className="dashboard-status">Активно</span>
           </div>
           <div className="dashboard-activity">
-            <p className="dashboard-caption"><span />Рассылка-приглашение запущена</p>
-            <p className="dashboard-description">Показываем канал пользователям из большой базы.</p>
+            <p className="dashboard-caption"><span />Пример: задание опубликовано</p>
+            <p className="dashboard-description">Пользователи выполняют задания на подписку.</p>
             <div className="dashboard-progress-label"><span>Прогресс выполнения</span><strong>68%</strong></div>
             <div className="dashboard-progress"><span /></div>
             <div className="dashboard-chart" aria-hidden="true">
@@ -71,3 +71,4 @@ export function Hero({ onPrimaryClick, onPricingClick }: HeroProps) {
     </section>
   );
 }
+

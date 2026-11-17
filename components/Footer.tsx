@@ -14,7 +14,7 @@ export function Footer() {
         <div>
           <a href="#top" className="footer-brand"><Image src="/brand/logo.svg" alt="Подписчики Телеграм — на главную" width={520} height={144} className="site-brand-logo" /></a>
           <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
-            Живые подписчики в Telegram-канал через рассылку-приглашение.
+            Реальные подписчики в Telegram-канал через оплачиваемые задания.
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Самозанятый Савкин Александр Игоревич<br />
