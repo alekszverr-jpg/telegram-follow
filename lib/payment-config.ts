@@ -1,2 +1,2 @@
-// Payment switch: "bank", "prodamus" or "payanyway". Publish after changing.
-export const paymentMode: "bank" | "prodamus" | "payanyway" = "bank";
+// Match the payment mode for new orders in the Apps Script deployment.
+export const paymentMode: "bank" | "prodamus" | "payanyway" | "yookassa" = "bank";

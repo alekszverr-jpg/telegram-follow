@@ -69,21 +69,25 @@ export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
         method: "POST",
         credentials: "omit",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ ...payload, submissionToken: submission.current.token })
+        body: JSON.stringify({ ...payload, submissionToken: submission.current.token, supportsYooKassa: true })
       });
       const result = await response.json();
       if (!response.ok || result.success !== true) throw new Error("Сохранение не подтверждено");
       const amount = Number(selectedPlan.price.replace(/\D/g, ""));
-      if (typeof result.requestId === "string" && /^TG-[A-Z0-9-]{6,40}$/.test(result.requestId) && result.amount === amount && ["Не проверена", "Оплачено"].includes(result.paymentStatus)) {
+      const provider = result.paymentProvider === "bank" || result.paymentProvider === "prodamus" ||
+        result.paymentProvider === "payanyway" || result.paymentProvider === "yookassa" ? result.paymentProvider : undefined;
+      const statuses = provider === "yookassa" ? ["Не проверена", "Оплачено", "Отменена", "Тестовая оплата"] : ["Не проверена", "Оплачено"];
+      if (typeof result.requestId === "string" && /^TG-[A-Z0-9-]{6,40}$/.test(result.requestId) && result.amount === amount && statuses.includes(result.paymentStatus)) {
         let paymentUrl: string | undefined;
-        if (result.paymentProvider === "prodamus" && typeof result.paymentUrl === "string") {
+        if ((provider === "prodamus" || provider === "yookassa") && typeof result.paymentUrl === "string") {
           try {
             const url = new URL(result.paymentUrl);
-            if (url.origin === "https://realbuzz.payform.ru" && !url.username && !url.password) paymentUrl = url.href;
+            const allowedOrigins = provider === "yookassa" ? ["https://yoomoney.ru", "https://yookassa.ru"] : ["https://realbuzz.payform.ru"];
+            if (url.protocol === "https:" && allowedOrigins.includes(url.origin) && !url.username && !url.password) paymentUrl = url.href;
           } catch { /* A malformed payment URL must never become a link. */ }
         }
         setSavedOrder({ requestId: result.requestId, amount, plan: selectedPlanLabel,
-          provider: result.paymentProvider === "prodamus" || result.paymentProvider === "payanyway" ? result.paymentProvider : undefined,
+          provider, providerLocked: result.paymentProviderLocked === true,
           paymentForm: validatePayAnyWayForm(result.paymentForm, result.requestId, amount),
           paymentUrl, paymentStatus: result.paymentStatus });
         try {
@@ -114,95 +118,95 @@ export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
           <h2 className="section-title">Заказать услугу</h2>
         </div>
 
-        <form className="lead-card ym-disable-submit" onSubmit={handleSubmit} noValidate>
-          <input type="hidden" name="plan" value={selectedPlanLabel} />
-          {isSent ? (
+        {isSent ? (
+          <div className="lead-card">
             <div className="order-result" ref={successPanel} role="status" tabIndex={-1}>
               {savedOrder ? <PaymentDetails order={savedOrder} /> : <p>Заявка сохранена. Реквизиты оплаты сейчас недоступны. Напишите на <a href="mailto:realbuzzmanager@yandex.ru">realbuzzmanager@yandex.ru</a> — поможем с оплатой. Повторно отправлять заявку не нужно.</p>}
             </div>
-          ) : (
-            <>
-              <details className="plan-picker" ref={planPicker}>
-                <summary ref={planSummary} className="focus-ring">
-                  <span className="plan-summary-copy">
-                    <span className="plan-summary-label">Выбранный тариф</span>
-                    <strong>{selectedPlan ? `${selectedPlan.name} · ${selectedPlan.price}` : "Без выбора тарифа"}</strong>
-                    {selectedPlan ? <span className="plan-summary-meta">{selectedPlan.subscribers} · {selectedPlan.period}</span> : null}
-                  </span>
-                  <span className="plan-change">{selectedPlan ? "Изменить" : "Выбрать"}<span aria-hidden="true">↓</span></span>
-                </summary>
-                <div className="plan-options" role="group" aria-label="Выберите тариф">
-                  {plans.map((plan) => (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      className="plan-option focus-ring"
-                      aria-pressed={selectedPlan?.id === plan.id}
-                      disabled={isSubmitting}
-                      onClick={() => selectPlan(plan)}
-                    >
-                      <span className="plan-option-check"><CheckIcon /></span>
-                      <span><strong>{plan.name}</strong><small>{plan.subscribers}</small></span>
-                      <strong className="plan-option-price">{plan.price}</strong>
-                    </button>
-                  ))}
-                </div>
-              </details>
-
-              <div className="lead-fields">
-                <div>
-                  <label htmlFor="contact">Ваши контакты</label>
-                  <input
-                    ref={contactInput}
-                    id="contact"
-                    name="email"
-                    type="text"
-                    autoComplete="off"
-                    inputMode="text"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    enterKeyHint="next"
-                    value={contact}
-                    onChange={(event) => setContact(event.target.value)}
-                    className="form-input ym-disable-keys"
-                    placeholder="Ваш @username в Telegram"
+          </div>
+        ) : (
+          <form className="lead-card ym-disable-submit" onSubmit={handleSubmit} noValidate>
+            <input type="hidden" name="plan" value={selectedPlanLabel} />
+            <details className="plan-picker" ref={planPicker}>
+              <summary ref={planSummary} className="focus-ring">
+                <span className="plan-summary-copy">
+                  <span className="plan-summary-label">Выбранный тариф</span>
+                  <strong>{selectedPlan ? `${selectedPlan.name} · ${selectedPlan.price}` : "Без выбора тарифа"}</strong>
+                  {selectedPlan ? <span className="plan-summary-meta">{selectedPlan.subscribers} · {selectedPlan.period}</span> : null}
+                </span>
+                <span className="plan-change">{selectedPlan ? "Изменить" : "Выбрать"}<span aria-hidden="true">↓</span></span>
+              </summary>
+              <div className="plan-options" role="group" aria-label="Выберите тариф">
+                {plans.map((plan) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    className="plan-option focus-ring"
+                    aria-pressed={selectedPlan?.id === plan.id}
                     disabled={isSubmitting}
-                    aria-invalid={Boolean(errors.contact)}
-                    aria-describedby={errors.contact ? "contact-error" : undefined}
-                  />
-                  {errors.contact ? <p id="contact-error" className="field-error">{errors.contact}</p> : null}
-                </div>
-                <div>
-                  <label htmlFor="channel">Ссылка на Telegram-канал</label>
-                  <input
-                    ref={channelInput}
-                    id="channel"
-                    name="channel"
-                    type="text"
-                    autoComplete="off"
-                    inputMode="url"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    enterKeyHint="send"
-                    value={channel}
-                    onChange={(event) => setChannel(event.target.value)}
-                    className="form-input ym-disable-keys"
-                    placeholder="t.me/channel или @channelname"
-                    disabled={isSubmitting}
-                    aria-invalid={Boolean(errors.channel)}
-                    aria-describedby={errors.channel ? "channel-error" : undefined}
-                  />
-                  {errors.channel ? <p id="channel-error" className="field-error">{errors.channel}</p> : null}
-                </div>
+                    onClick={() => selectPlan(plan)}
+                  >
+                    <span className="plan-option-check"><CheckIcon /></span>
+                    <span><strong>{plan.name}</strong><small>{plan.subscribers}</small></span>
+                    <strong className="plan-option-price">{plan.price}</strong>
+                  </button>
+                ))}
               </div>
-              {submitError ? <p className="field-error" role="alert">{submitError}</p> : null}
-              <button className="btn-primary lead-submit" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Отправляем..." : "Отправить заявку"}
-              </button>
-            </>
-          )}
-          {!isSent && <p className="mt-4 text-sm leading-6 text-slate-600">Данные заявки нужны для связи и обсуждения заказа. <a className="underline" href="/privacy/">Политика обработки данных</a>. Условия заказа описаны в <a className="underline" href="/offer/">оферте</a>.</p>}
-        </form>
+            </details>
+
+            <div className="lead-fields">
+              <div>
+                <label htmlFor="contact">Ваши контакты</label>
+                <input
+                  ref={contactInput}
+                  id="contact"
+                  name="email"
+                  type="text"
+                  autoComplete="off"
+                  inputMode="text"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  enterKeyHint="next"
+                  value={contact}
+                  onChange={(event) => setContact(event.target.value)}
+                  className="form-input ym-disable-keys"
+                  placeholder="Ваш @username в Telegram"
+                  disabled={isSubmitting}
+                  aria-invalid={Boolean(errors.contact)}
+                  aria-describedby={errors.contact ? "contact-error" : undefined}
+                />
+                {errors.contact ? <p id="contact-error" className="field-error">{errors.contact}</p> : null}
+              </div>
+              <div>
+                <label htmlFor="channel">Ссылка на Telegram-канал</label>
+                <input
+                  ref={channelInput}
+                  id="channel"
+                  name="channel"
+                  type="text"
+                  autoComplete="off"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  enterKeyHint="send"
+                  value={channel}
+                  onChange={(event) => setChannel(event.target.value)}
+                  className="form-input ym-disable-keys"
+                  placeholder="t.me/channel или @channelname"
+                  disabled={isSubmitting}
+                  aria-invalid={Boolean(errors.channel)}
+                  aria-describedby={errors.channel ? "channel-error" : undefined}
+                />
+                {errors.channel ? <p id="channel-error" className="field-error">{errors.channel}</p> : null}
+              </div>
+            </div>
+            {submitError ? <p className="field-error" role="alert">{submitError}</p> : null}
+            <button className="btn-primary lead-submit" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Отправляем..." : "Отправить заявку"}
+            </button>
+            <p className="mt-4 text-sm leading-6 text-slate-600">Данные заявки нужны для связи и обсуждения заказа. <a className="underline" href="/privacy/">Политика обработки данных</a>. Условия заказа описаны в <a className="underline" href="/offer/">оферте</a>.</p>
+          </form>
+        )}
       </div>
     </section>
   );

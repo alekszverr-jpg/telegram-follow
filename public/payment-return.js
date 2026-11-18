@@ -35,10 +35,10 @@
     panel.querySelector('[data-amount]').textContent = order.amount.toLocaleString('ru-RU') + ' ₽';
   }
   if (hasSession && !hasReturnKey) showSummary(saved);
-  var busy = false, attempts = 0, timer, paid = false;
+  var busy = false, attempts = 0, timer, settled = false;
   var delays = [3000, 5000, 8000, 12000, 20000];
   async function check() {
-    if (busy || paid) return;
+    if (busy || settled) return;
     clearTimeout(timer);
     busy = true;
     button.hidden = false;
@@ -67,7 +67,7 @@
         } catch (_) { /* Keep the signed fragment if storage is blocked. */ }
       }
       if (result.paymentStatus === 'Оплачено') {
-        paid = true;
+        settled = true;
         heading.textContent = 'Спасибо! Заказ оплачен';
         message.textContent = 'Оплату получили. Мы начнём работу по вашему заказу. Если понадобятся уточнения, свяжемся с вами.';
         panel.querySelector('[data-amount-label]').textContent = 'Оплачено';
@@ -76,6 +76,18 @@
         var unpaidSupport = panel.querySelector('[data-unpaid-support]');
         if (paidSupport) paidSupport.hidden = false;
         if (unpaidSupport) unpaidSupport.hidden = true;
+        button.hidden = true;
+        return;
+      }
+      if (result.paymentProvider === 'yookassa' && ['Отменена', 'Тестовая оплата'].includes(result.paymentStatus)) {
+        settled = true;
+        if (result.paymentStatus === 'Тестовая оплата') {
+          heading.textContent = 'Тестовый платёж прошёл';
+          message.textContent = 'ЮKassa подтвердила оплату в тестовом магазине.';
+        } else {
+          heading.textContent = 'Платёж отменён';
+          message.textContent = 'Чтобы оплатить этот заказ, напишите на указанную ниже почту и сообщите номер заказа.';
+        }
         button.hidden = true;
         return;
       }
@@ -89,7 +101,7 @@
       message.textContent = 'Сейчас не удалось получить подтверждение оплаты. Если вы уже оплатили заказ, повторно платить не нужно. Попробуйте проверить статус чуть позже или напишите на указанную ниже почту.';
     } finally {
       busy = false;
-      if (!paid) {
+      if (!settled) {
         button.disabled = false;
         button.textContent = 'Проверить статус';
         if (attempts < delays.length) timer = setTimeout(check, delays[attempts++]);
