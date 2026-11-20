@@ -14,6 +14,21 @@ type LeadFormProps = {
 const leadEndpoint =
   "https://script.google.com/macros/s/AKfycby2bRUuVzYXiMHYHQPX20AZ6v0iKcQHUeRY4ejFoo-LzDhIGlk34IUS9SBRBnPNbH_k/exec";
 
+type LeadGoal = "tg_form_start" | "tg_lead_success";
+
+function trackLeadGoal(goal: LeadGoal) {
+  // The consent script defines ym only after the visitor enables analytics.
+  const { ym } = window as Window & { ym?: (counter: number, method: "reachGoal", target: LeadGoal) => void };
+  if (typeof ym !== "function") return false;
+
+  try {
+    ym(109558727, "reachGoal", goal);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
   const [contact, setContact] = useState("");
   const [channel, setChannel] = useState("");
@@ -28,6 +43,8 @@ export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
   const contactInput = useRef<HTMLInputElement>(null);
   const channelInput = useRef<HTMLInputElement>(null);
   const successPanel = useRef<HTMLDivElement>(null);
+  const formStartTracked = useRef(false);
+  const leadSuccessTracked = useRef(false);
 
   useEffect(() => {
     if (isSent) {
@@ -40,9 +57,14 @@ export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
     ? `${selectedPlan.name} — ${selectedPlan.subscribers} за ${selectedPlan.price}`
     : "";
 
+  const trackFormStart = () => {
+    if (!formStartTracked.current) formStartTracked.current = trackLeadGoal("tg_form_start");
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSent || isSubmitting) return;
+    trackFormStart();
     setSubmitError("");
 
     const nextErrors: { contact?: string; channel?: string } = {};
@@ -73,6 +95,7 @@ export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
       });
       const result = await response.json();
       if (!response.ok || result.success !== true) throw new Error("Сохранение не подтверждено");
+      if (!leadSuccessTracked.current) leadSuccessTracked.current = trackLeadGoal("tg_lead_success");
       const amount = Number(selectedPlan.price.replace(/\D/g, ""));
       const provider = result.paymentProvider === "bank" || result.paymentProvider === "prodamus" ||
         result.paymentProvider === "payanyway" || result.paymentProvider === "yookassa" ? result.paymentProvider : undefined;
@@ -125,7 +148,15 @@ export function LeadForm({ plans, selectedPlan, onSelectPlan }: LeadFormProps) {
             </div>
           </div>
         ) : (
-          <form className="lead-card ym-disable-submit" onSubmit={handleSubmit} noValidate>
+          <form
+            className="lead-card ym-disable-submit"
+            onClickCapture={trackFormStart}
+            onFocusCapture={trackFormStart}
+            onKeyDownCapture={trackFormStart}
+            onChangeCapture={trackFormStart}
+            onSubmit={handleSubmit}
+            noValidate
+          >
             <input type="hidden" name="plan" value={selectedPlanLabel} />
             <details className="plan-picker" ref={planPicker}>
               <summary ref={planSummary} className="focus-ring">
